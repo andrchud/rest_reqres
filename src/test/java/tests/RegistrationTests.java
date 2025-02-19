@@ -1,14 +1,16 @@
 package tests;
 
 import io.restassured.RestAssured;
+import model.*;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import specs.ApiSpecs;
 
+import static io.qameta.allure.Allure.step;
 import static io.restassured.RestAssured.given;
-import static io.restassured.http.ContentType.JSON;
-import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class RegistrationTests {
     @BeforeAll
@@ -20,104 +22,106 @@ public class RegistrationTests {
     @Test
     @DisplayName("Успешная регистрация")
     void registrationTest() {
-        String registrationData = "{\"email\": \"eve.holt@reqres.in\",\"password\": \"pistol\"}";
-
-        given()
-                .body(registrationData)
-                .contentType(JSON)
-                .log().uri()
-
-                .when()
-                .post("/register")
-
-                .then()
-                .log().status()
-                .log().body()
-                .statusCode(200)
-                .body("id", is(4))
-                .body("token", is("QpwL5tke4Pnpja7X4"));
+        RegistrationRequestModel requestModel = new RegistrationRequestModel();
+        requestModel.setEmail("eve.holt@reqres.in");
+        requestModel.setPassword("pistol");
+        RegistrationResponseModel response = step("Успешная регистрация", () ->
+            given(ApiSpecs.baseRequestSpec)
+                    .body(requestModel)
+                    .when()
+                    .post("/register")
+                    .then()
+                    .spec(ApiSpecs.successResponseSpec)
+                    .extract().as(RegistrationResponseModel.class)
+        );
+        step("Проверка токена в ответе", () ->
+                assertThat(response).extracting("token","id").containsExactly("QpwL5tke4Pnpja7X4", 4)
+        );
     }
 
     @Test
     @DisplayName("Регистрация без пароля")
     void registrationWithoutPasswordTest() {
-        String registrationData = "{\"email\": \"eve.holt@reqres.in\"}";
+        RegistrationRequestModel requestModel = new RegistrationRequestModel();
+        requestModel.setEmail("eve.holt@reqres.in");
 
-        given()
-                .body(registrationData)
-                .contentType(JSON)
-                .log().uri()
-
+        ErrorResponseModel response = step("Не успешная регистрация без пароля", () ->
+        given(ApiSpecs.baseRequestSpec)
+                .body(requestModel)
                 .when()
                 .post("/register")
-
                 .then()
-                .log().status()
-                .log().body()
-                .statusCode(400)
-                .body("error", is("Missing password"));
+                .spec(ApiSpecs.errorResponseSpec)
+                .extract().as(ErrorResponseModel.class)
+        );
+
+        step("Проверка ощибки в ответе", () ->
+                assertThat(response.getError()).isEqualTo("Missing password")
+        );
+
     }
 
     @Test
     @DisplayName("Cписок ползователей не пустой")
     void listUsersNotNullTest() {
-        given()
-                .log().uri()
-
+        step("Получение списка пользователей и проверка что он не пустой", () -> {
+        given(ApiSpecs.baseRequestSpec)
                 .when()
                 .get("/users?page=2")
 
                 .then()
-                .log().status()
-                .log().body()
-                .statusCode(200)
+                .spec(ApiSpecs.successResponseSpec)
                 .body("data", notNullValue());
+        });
 
     }
 
     @Test
     @DisplayName("Успешное создание пользователя")
     void createUserTest() {
+        CreateUserRequestModel requestModel = new CreateUserRequestModel();
+        requestModel.setName("Andrey");
+        requestModel.setJob("Senior QA");
 
-        String createUserData = "{\"name\": \"Andrey\", \"job\": \"Senior QA\"}";
-
-        given()
-                .body(createUserData)
-                .contentType(JSON)
-                .log().uri()
-
+        CreateUserResponseModel response = step("Успешное создание пользователя", () ->
+        given(ApiSpecs.baseRequestSpec)
+                .body(requestModel)
                 .when()
                 .post("/users")
-
                 .then()
-                .log().status()
-                .log().body()
-                .statusCode(201)
-                .body("name", is("Andrey"))
-                .body("job", is("Senior QA"))
-                .body("id", notNullValue())
-                .body("createdAt", notNullValue())
-                .extract().path("id");
+                .spec(ApiSpecs.createdResponseSpec).
+                extract().as(CreateUserResponseModel.class)
+        );
+
+        step("Проверка полей ответа", () -> {
+            assertThat(response.getName()).isEqualTo("Andrey");
+            assertThat(response.getJob()).isEqualTo("Senior QA");
+            assertThat(response.getId()).isNotNull();
+            assertThat(response.getCreatedAt()).isNotNull();
+        });
+
     }
 
     @Test
-    @DisplayName("Создание пользователя с некорректным JSON")
+    @DisplayName("Создание пользователя с пустым name")
     void createUserWithInvalidJsonTest() {
+        InvalidCreateUserRequestModel requestModel = new InvalidCreateUserRequestModel();
 
-        String createUserData = "{\"name\": Andrey}";
-
-        given()
-                .body(createUserData)
-                .contentType(JSON)
-                .log().uri()
-
+        InvalidCreateUserResponseModel response = step("Успешное создание пользователя", () ->
+        given(ApiSpecs.baseRequestSpec)
+                .body(requestModel)
                 .when()
                 .post("/users")
-
                 .then()
-                .log().status()
-                .log().body()
-                .statusCode(400);
+                .spec(ApiSpecs.createdResponseSpec)
+                .extract().as(InvalidCreateUserResponseModel.class)
+        );
+
+        step("Проверкаа полей ответа", () -> {
+            assertThat(response.getName()).isNull();
+            assertThat(response.getId()).isNotNull();
+            assertThat(response.getCreatedAt()).isNotNull();
+        });
     }
 
 }
