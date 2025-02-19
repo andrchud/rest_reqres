@@ -4,6 +4,7 @@ import io.restassured.RestAssured;
 import model.*;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import specs.ApiSpecs;
 
@@ -12,6 +13,7 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.assertj.core.api.Assertions.assertThat;
 
+@Tag("API")
 public class RegistrationTests {
     @BeforeAll
     public static void setUp() {
