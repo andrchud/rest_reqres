@@ -12,9 +12,8 @@ import static io.restassured.http.ContentType.JSON;
 public class ApiSpecs {
     public static RequestSpecification baseRequestSpec = with()
             .filter(withCustomTemplates())
-            .log().uri()
-            .log().body()
-            .log().headers()
+            .log()
+            .all()
             .contentType(JSON);
 
 

@@ -69,8 +69,8 @@ public class RegistrationTests {
         step("Получение списка пользователей и проверка что он не пустой", () -> {
         given(ApiSpecs.baseRequestSpec)
                 .when()
-                .get("/users?page=2")
-
+                .queryParam("page","2")
+                .get("/users")
                 .then()
                 .spec(ApiSpecs.successResponseSpec)
                 .body("data", notNullValue());
